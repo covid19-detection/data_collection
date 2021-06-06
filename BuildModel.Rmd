@@ -1,0 +1,86 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r include=FALSE}
+library(bnlearn)
+library(gplots)
+normalize_df <- function(data) {
+  result <- data
+  for(col_name in colnames(data)) {
+    if(col_name != "label") {
+      col_max = max(data[, col_name])
+      col_min = min(data[, col_name])
+      col_mean = mean(data[, col_name])
+      
+      result[col_name] <- (data[, col_name] - col_mean) / (col_max - col_min)
+    }
+    
+  }
+  
+  return(result)
+}
+```
+
+```{r}
+features <- read.csv("features.csv", header = TRUE)[, -1]
+features[, "label"] <- as.numeric(features[, "label"] == "covid")
+features <- normalize_df(features)
+head(features)
+```
+
+```{r}
+normal_features <- c('chroma_stft', 'rmse', 'spectral_centroid', 
+                  'spectral_bandwidth', 'rolloff', 'zero_crossing_rate')
+mfcc_features <- paste("mfcc", 1:20, sep = "")
+
+mfcc_blacklist <- expand.grid(from = mfcc_features, to = mfcc_features)
+normal_mfcc_blacklist <- expand.grid(from = normal_features, to = mfcc_features)
+mfcc_normal_blacklist <- expand.grid(from = mfcc_features, to = normal_features)
+
+bl <- rbind(mfcc_blacklist, normal_mfcc_blacklist, mfcc_normal_blacklist)
+wl <- NULL
+```
+
+```{r}
+dag = hc(features, whitelist = wl, blacklist = bl)
+str.diff = boot.strength(features, R = 500, algorithm = "hc",
+             algorithm.args = list(whitelist = wl, blacklist = bl))
+attr(str.diff, "threshold")
+avg.diff = averaged.network(str.diff)
+```
+
+```{r}
+library(visNetwork)
+all_variables = sort(unique(c(avg.diff$arcs[, "from"], avg.diff$arcs[, "to"])))
+vis_nodes <- data.frame(id = all_variables, label = all_variables, group = c(1, 3, rep(2, 11), 1, 1, 1, 1, 1))
+vis_edges <- data.frame(from = avg.diff$arcs[, "from"], to =  avg.diff$arcs[, "to"], arrows.to.type = "arrow")
+visNetwork(vis_nodes, vis_edges, main = "Features Network") %>% visLayout(improvedLayout = TRUE)
+```
+```{r}
+fitted <- bn.fit(avg.diff, features)
+```
+
+```{r}
+nodes <-  c("zero_crossing_rate", "mfcc1",  "mfcc16",  "mfcc18",  "mfcc10","mfcc14", "mfcc12", "mfcc20", "mfcc17")
+covid <- cpdist(fitted, nodes = nodes, evidence = (label > 0.5))
+not_covid <- cpdist(fitted, nodes = nodes, evidence = (label < 0.5))
+
+for(node in nodes) {
+  plot(density(covid[, node]), col = "red", main = node)
+  lines(density(not_covid[, node]), col = "blue")
+  legend("topright", legend = c("covid", "not_covid"), col = c("red", "blue"), lty = 1:1)
+}
+```
+
+
+
+
+
+```{r}
+
+```
+
+
+
