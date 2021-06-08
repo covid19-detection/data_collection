@@ -3,7 +3,6 @@ into many sing-utterance audio files using annotation"""
 
 import json
 import os
-import glob
 import scipy.io.wavfile
 import pandas as pd
 from argparse import ArgumentParser
@@ -86,7 +85,7 @@ def main():
                         continue
 
                     start = ceil(start * rate)
-                    end = ceil(start * rate)
+                    end = ceil(end * rate)
 
                     # add metadata to row
                     # filename format : id_type(cough, ...)_idxutt
@@ -106,7 +105,6 @@ def main():
                     new_audio = audio[start:end]
                     output_name = os.path.join(args.outdir, 'data', filename)
                     scipy.io.wavfile.write(output_name, rate, new_audio)
-                    count += 1
 
     # Save aggregated annotation
     print(df)
