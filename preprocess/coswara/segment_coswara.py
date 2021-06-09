@@ -86,7 +86,7 @@ def main():
                         continue
 
                     start = ceil(start * rate)
-                    end = ceil(start * rate)
+                    end = ceil(end * rate)
 
                     # add metadata to row
                     # filename format : id_type(cough, ...)_idxutt
@@ -106,7 +106,6 @@ def main():
                     new_audio = audio[start:end]
                     output_name = os.path.join(args.outdir, 'data', filename)
                     scipy.io.wavfile.write(output_name, rate, new_audio)
-                    count += 1
 
     # Save aggregated annotation
     print(df)
